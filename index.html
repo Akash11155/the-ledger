@@ -203,7 +203,9 @@
     <aside>
       <h3>Screener Scope</h3>
       <div class="filter-group">
-        <label>Sector Matrix</label>
+        <label>Alpha Vantage Key</label>
+        <input type="password" id="mApiKey" placeholder="E5P4SMFADII5A70W">
+</div>
         <div class="chip-row" id="mSectorChips"></div>
       </div>
       <div class="filter-group">
@@ -235,6 +237,7 @@
       <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
         <input type="text" id="mSearchBox" placeholder="Search parameters or assets..." style="max-width:300px;">
         <span class="badge badge-intermediate" id="mResultCount" style="font-family:var(--font-mono);"></span>
+        <button class="btn primary" id="refreshBtn">Sync Live Market</button>
       </div>
       <table>
         <thead>
@@ -1107,7 +1110,34 @@
       };
     };
   }
+async function refreshMarketData() {
+    const apiKey = document.getElementById('mApiKey').value;
+    if (!apiKey) { alert("Please enter your API key in the sidebar first."); return; }
 
+    const btn = document.getElementById('refreshBtn');
+    btn.textContent = "Syncing...";
+
+    for (let i = 0; i < 3; i++) {
+        const s = stocks[i];
+        const url = `https://www.alphavantage.co/query?function=GLOBAL_QUOTE&symbol=${s.ticker}&apikey=${apiKey}`;
+
+        try {
+            const response = await fetch(url);
+            const data = await response.json();
+            const quote = data['Global Quote'];
+
+            if (quote) {
+                s.price = parseFloat(quote['05. price']);
+                s.changePct = parseFloat(quote['10. change percent'].replace('%', ''));
+            }
+        } catch (e) { console.error("Sync failed for", s.ticker); }
+    }
+
+    btn.textContent = "Sync Live Market";
+    renderMarketModule();
+}
+
+document.getElementById('refreshBtn').onclick = refreshMarketData;
   /* ---- Application Initialization Initialization Entry Point ---- */
   loadData().then(() => {
     initMarketModule();
