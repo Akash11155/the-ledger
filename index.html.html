@@ -1,0 +1,1119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>The Ledger Suite</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=JetBrains+Mono:wght@400;500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0F171C;
+    --panel: #152026;
+    --panel-dim: #1B2930;
+    --line: #24353F;
+    --brass: #C5A877;
+    --brass-bright: #EAD2A8;
+    --brass-dim: #8E7D5F;
+    --text: #E5E1D8;
+    --muted: #78878C;
+    --pos: #6CB595;
+    --neg:#C76858;
+    
+    --font-display: 'Fraunces', Georgia, serif;
+    --font-sans: 'Inter', -apple-system, sans-serif;
+    --font-mono: 'JetBrains Mono', monospace;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: var(--font-sans); -webkit-font-smoothing: antialiased;
+  }
+  ::selection { background: var(--brass); color: var(--bg); }
+  code { font-family: var(--font-mono); background: var(--panel-dim); padding: 2px 6px; border-radius: 4px; font-size: 12px; color: var(--brass-bright); }
+
+  /* ---- Ticker Tape ---- */
+  .ticker-wrap { border-bottom: 1px solid var(--line); background: var(--panel); overflow: hidden; white-space: nowrap; padding: 8px 0; }
+  .ticker-track { display: inline-block; animation: scroll 40s linear infinite; font-family: var(--font-mono); font-size: 12px; }
+  .ticker-track span { padding: 0 24px; color: var(--muted); }
+  .ticker-track span b { color: var(--text); font-weight: 500; margin-right: 6px;}
+  .tk-up { color: var(--pos) !important; }
+  .tk-dn { color: var(--neg) !important; }
+  @keyframes scroll { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+
+  /* ---- Master Header ---- */
+  header {
+    display: flex; align-items: flex-end; justify-content: space-between;
+    padding: 24px 32px 0; border-bottom: 1px solid var(--line); background: var(--panel);
+  }
+  .brand { display: flex; align-items: baseline; gap: 12px; margin-bottom: 16px; }
+  .brand h1 { font-family: var(--font-display); font-weight: 600; font-size: 28px; margin: 0; }
+  .brand .mark { color: var(--brass); }
+  .brand .tag { color: var(--muted); font-size: 11px; font-family: var(--font-mono); text-transform: uppercase; letter-spacing: 0.12em; }
+  
+  /* Top Navigation Tabs */
+  .master-nav { display: flex; gap: 4px; margin: 0; }
+  .master-tab {
+    background: transparent; border: 1px solid var(--line); border-bottom: none;
+    color: var(--muted); padding: 12px 20px; font-family: var(--font-mono);
+    font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em;
+    border-radius: 6px 6px 0 0; cursor: pointer; transition: all 0.2s ease;
+  }
+  .master-tab:hover { color: var(--text); background: var(--panel-dim); }
+  .master-tab.active { background: var(--bg); border-color: var(--line); color: var(--brass); font-weight: 600; position: relative; }
+  .master-tab.active::after { content: ''; position: absolute; bottom: -1px; left: 0; right: 0; height: 1px; background: var(--bg); }
+
+  /* ---- Layout Panels ---- */
+  .panel { display: none; padding: 24px 32px; }
+  .panel.active { display: block; }
+  .layout-with-sidebar { display: grid; grid-template-columns: 260px 1fr; gap: 32px; min-height: calc(100vh - 160px); }
+  
+  aside { border-right: 1px solid var(--line); padding-right: 24px; }
+  aside h3 {
+    font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.08em; color: var(--brass-dim); margin: 0 0 16px;
+    border-bottom: 1px solid var(--line); padding-bottom: 8px;
+  }
+
+  /* ---- Common UI Elements ---- */
+  .filter-group { margin-bottom: 20px; }
+  .filter-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; font-family: var(--font-mono); }
+  select, input[type=text], input[type=number], textarea {
+    width: 100%; background: var(--panel); border: 1px solid var(--line);
+    color: var(--text); padding: 8px 12px; border-radius: 4px; font-size: 13px;
+    font-family: var(--font-sans);
+  }
+  textarea { resize: vertical; min-height: 80px; }
+  select:focus, input:focus, textarea:focus { outline: 1px solid var(--brass); border-color: var(--brass); }
+  
+  .btn {
+    font-family: var(--font-mono); font-size: 12px; letter-spacing: 0.05em; text-transform: uppercase;
+    border-radius: 4px; padding: 10px 16px; cursor: pointer; border: 1px solid var(--brass);
+    background: transparent; color: var(--brass-bright); transition: all 0.15s ease;
+  }
+  .btn:hover { background: rgba(197, 168, 119, 0.1); }
+  .btn.primary { background: var(--brass); color: var(--bg); font-weight: 600; }
+  .btn.primary:hover { background: var(--brass-bright); }
+  .btn.ghost { border-color: var(--line); color: var(--muted); }
+  .btn.danger { border-color: var(--neg); color: var(--neg); }
+  .btn.danger:hover { background: rgba(199, 104, 88, 0.1); }
+  
+  .chip-row { display: flex; flex-wrap: wrap; gap: 6px; }
+  .chip {
+    border: 1px solid var(--line); color: var(--muted); padding: 4px 10px;
+    border-radius: 20px; font-size: 11px; cursor: pointer; user-select: none; font-family: var(--font-mono);
+  }
+  .chip.active { background: var(--brass); border-color: var(--brass); color: var(--bg); font-weight: 500; }
+  
+  .badge { font-family: var(--font-mono); font-size: 10px; padding: 2px 6px; border-radius: 4px; border: 1px solid; display: inline-block; text-transform: uppercase; }
+  .badge-foundation { color: var(--pos); border-color: var(--pos); background: rgba(108,181,149,0.08); }
+  .badge-intermediate { color: var(--brass); border-color: var(--brass); background: rgba(197,168,119,0.08); }
+  .badge-final { color: var(--neg); border-color: var(--neg); background: rgba(199,104,88,0.08); }
+
+  /* ---- Tables ---- */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    text-align: right; font-family: var(--font-mono); font-size: 11px; text-transform: uppercase;
+    color: var(--muted); border-bottom: 1px solid var(--line); padding: 10px; cursor: pointer; user-select: none;
+  }
+  thead th:first-child, thead th:nth-child(2) { text-align: left; }
+  thead th.sorted { color: var(--brass); }
+  tbody td { text-align: right; padding: 12px 10px; border-bottom: 1px solid var(--line); font-family: var(--font-mono); }
+  tbody td:first-child, tbody td:nth-child(2) { text-align: left; font-family: var(--font-sans); }
+  tbody tr { cursor: pointer; }
+  tbody tr:hover { background: var(--panel); }
+  tbody tr.selected { background: #1C2D35; }
+  
+  /* ---- Academic Ledger Custom Elements ---- */
+  .subnav { display: flex; gap: 8px; margin-bottom: 24px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+  .subtab { font-family: var(--font-mono); font-size: 12px; padding: 6px 14px; border-radius: 4px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; }
+  .subtab.active { background: var(--panel); border-color: var(--brass); color: var(--brass-bright); }
+  
+  .entry { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 6px; margin-bottom: 12px; padding: 16px 16px 16px 52px; }
+  .entry::before { content: attr(data-serial); position: absolute; left: 0; top: 0; bottom: 0; width: 40px; display: flex; align-items: center; justify-content: center; font-family: var(--font-mono); font-size: 11px; color: var(--bg); background: var(--brass); border-radius: 6px 0 0 6px; }
+  .entry-head { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+  .entry-q { font-size: 15px; line-height: 1.5; margin: 8px 0; font-family: var(--font-sans); }
+  .entry-body { margin-top: 14px; padding-top: 14px; border-top: 1px dashed var(--line); display: none; }
+  .entry.open .entry-body { display: block; }
+  
+  .option-line { padding: 8px 12px; border-radius: 4px; margin-bottom: 6px; font-size: 13px; border: 1px solid var(--line); background: var(--bg); }
+  .option-line.correct { border-color: var(--pos); color: var(--pos); }
+  .answer-block { font-size: 13.5px; line-height: 1.6; background: var(--panel-dim); border-radius: 6px; padding: 12px; margin-top: 8px; }
+  
+  .star-btn { background: none; border: none; cursor: pointer; font-size: 16px; color: var(--brass); margin-left: auto; }
+  .star-btn.off { color: var(--line); }
+  
+  /* ---- Mock / Practice Cards ---- */
+  .question-card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 24px; margin-bottom: 16px; }
+  .opt-btn { display: block; width: 100%; text-align: left; font-size: 14px; background: var(--panel-dim); border: 1px solid var(--line); color: var(--text); border-radius: 6px; padding: 12px; margin-bottom: 8px; cursor: pointer; font-family: var(--font-sans); }
+  .opt-btn:hover:not(:disabled) { border-color: var(--brass); }
+  .opt-btn.selected { border-color: var(--brass-bright); background: rgba(197,168,119,0.1); }
+  .opt-btn.correct { border-color: var(--pos); background: rgba(108,181,149,0.1); color: var(--pos); }
+  .opt-btn.wrong { border-color: var(--neg); background: rgba(199,104,88,0.1); color: var(--neg); }
+  
+  .stamp { display: inline-block; font-family: var(--font-mono); font-weight: 600; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; border: 2px solid currentColor; border-radius: 4px; padding: 4px 8px; margin: 12px 0; }
+  .stamp.ok { color: var(--pos); }
+  .stamp.bad { color: var(--neg); }
+
+  /* ---- Compare Tray ---- */
+  #tray {
+    position: sticky; bottom: 0; background: var(--panel); border-top: 2px solid var(--brass-dim);
+    padding: 16px 32px; transform: translateY(100%); transition: transform 0.25s ease; z-index: 100;
+  }
+  #tray.open { transform: translateY(0); }
+  .compare-grid { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(180px, 1fr); gap: 12px; overflow-x: auto; margin-top: 12px; }
+  .compare-col { background: var(--panel-dim); padding: 14px; border-radius: 6px; border: 1px solid var(--line); }
+  .compare-col .cticker { font-family: var(--font-display); font-size: 18px; color: var(--brass); margin-bottom: 8px; display: flex; justify-content: space-between; }
+  .compare-row { display: flex; justify-content: space-between; font-size: 12px; padding: 6px 0; border-bottom: 1px solid var(--line); }
+  
+  /* ---- Progress Analytics Dashboard ---- */
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 16px; margin-bottom: 24px; }
+  .stat-tile { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 16px; text-align: center; }
+  .stat-tile .big { font-family: var(--font-mono); font-size: 28px; color: var(--brass-bright); }
+  .stat-tile .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+  .progress-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; font-size: 13px; }
+  .bar-track { flex: 1; height: 8px; background: var(--panel-dim); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; }
+
+  footer { padding: 24px 32px; color: var(--muted); font-size: 11px; font-family: var(--font-mono); border-top: 1px solid var(--line); margin-top: 4px; }
+</style>
+</head>
+<body>
+
+<div class="ticker-wrap"><div class="ticker-track" id="tickerTrack"></div></div>
+
+<header>
+  <div class="brand">
+    <h1><span class="mark">▴</span> The Ledger</h1>
+    <span class="tag">Unified Workspace</span>
+  </div>
+  <nav class="master-nav">
+    <button class="master-tab active" data-master="market">Market Terminal</button>
+    <button class="master-tab" data-master="study">Academic Ledger</button>
+  </nav>
+</header>
+
+<!-- ============================================ -->
+<!--            PANEL: MARKET TERMINAL            -->
+<!-- ============================================ -->
+<div class="panel active" id="panel-market">
+  <div class="layout-with-sidebar">
+    <aside>
+      <h3>Screener Scope</h3>
+      <div class="filter-group">
+        <label>Sector Matrix</label>
+        <div class="chip-row" id="mSectorChips"></div>
+      </div>
+      <div class="filter-group">
+        <label>Market Cap (Billions)</label>
+        <div style="display:flex; gap:6px;">
+          <input type="number" id="mCapMin" placeholder="Min">
+          <input type="number" id="mCapMax" placeholder="Max">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Price Range</label>
+        <div style="display:flex; gap:6px;">
+          <input type="number" id="mPriceMin" placeholder="Min">
+          <input type="number" id="mPriceMax" placeholder="Max">
+        </div>
+      </div>
+      <div class="filter-group">
+        <label>Trading Dynamics</label>
+        <div class="chip-row" id="mMoveChips">
+          <div class="chip active" data-move="all">All</div>
+          <div class="chip" data-move="gainers">Gainers</div>
+          <div class="chip" data-move="losers">Losers</div>
+        </div>
+      </div>
+      <button class="btn ghost style-btn" id="mResetBtn" style="width:100%;">Reset Matrix</button>
+    </aside>
+
+    <main>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <input type="text" id="mSearchBox" placeholder="Search parameters or assets..." style="max-width:300px;">
+        <span class="badge badge-intermediate" id="mResultCount" style="font-family:var(--font-mono);"></span>
+      </div>
+      <table>
+        <thead>
+          <tr id="mHeadRow"></tr>
+        </thead>
+        <tbody id="mTableBody"></tbody>
+      </table>
+      <div id="mEmptyState" style="display:none; text-align:center; padding:48px;" class="muted">
+        <p style="font-family:var(--font-display); font-size:18px; color:var(--text);">No matching assets discovered</p>
+        <p>Loosen your quantitative restrictions in the sidebar.</p>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!--            PANEL: ACADEMIC LEDGER            -->
+<!-- ============================================ -->
+<div class="panel" id="panel-study">
+  <nav class="subnav">
+    <button class="subtab active" data-sub="browse">Question Bank</button>
+    <button class="subtab" data-sub="practice">Practice Room</button>
+    <button class="subtab" data-sub="mock">Timed Mock Exam</button>
+    <button class="subtab" data-sub="progress">Analytics & Progress</button>
+    <button class="subtab" data-sub="add">Add Repository Entries</button>
+  </nav>
+
+  <!-- Subpanel: Browse -->
+  <div class="subpanel" id="sub-browse" style="display:block;">
+    <div class="layout-with-sidebar">
+      <aside>
+        <h3>Filters</h3>
+        <div class="filter-group">
+          <label>Curriculum Level</label>
+          <select id="bLevel"></select>
+        </div>
+        <div class="filter-group">
+          <label>Subject Paper</label>
+          <select id="bPaper"></select>
+        </div>
+        <div class="filter-group">
+          <label>Exam Year</label>
+          <select id="bYear"></select>
+        </div>
+        <label style="display:flex; align-items:center; gap:8px; font-size:13px;" class="muted">
+          <input type="checkbox" id="bBookmarked" style="accent-color:var(--brass);"> Starred items only
+        </label>
+      </aside>
+      <main>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <input type="text" id="bSearch" placeholder="Search exact question strings..." style="max-width:300px;">
+          <span id="bCount" class="muted" style="font-family:var(--font-mono); font-size:12px;"></span>
+        </div>
+        <div id="bList"></div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Subpanel: Practice -->
+  <div class="subpanel" id="sub-practice" style="display:none;">
+    <div id="practiceArea"></div>
+  </div>
+
+  <!-- Subpanel: Mock -->
+  <div class="subpanel" id="sub-mock" style="display:none;">
+    <div id="mockArea"></div>
+  </div>
+
+  <!-- Subpanel: Progress -->
+  <div class="subpanel" id="sub-progress" style="display:none;">
+    <div id="progressArea"></div>
+  </div>
+
+  <!-- Subpanel: Add -->
+  <div class="subpanel" id="sub-add" style="display:none;">
+    <div style="display:flex; gap:24px; margin-bottom:16px;">
+      <label><input type="radio" name="addMode" value="single" checked style="accent-color:var(--brass);"> Single Entry Builder</label>
+      <label><input type="radio" name="addMode" value="bulk" style="accent-color:var(--brass);"> Bulk JSON/Markdown Parsing</label>
+    </div>
+    
+    <div id="addSingleForm" class="question-card">
+      <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap:12px; margin-bottom:12px;">
+        <div><label>Level</label><select id="fLevel"><option>Foundation</option><option selected>Intermediate</option><option>Final</option></select></div>
+        <div><label>Paper Subject</label><input type="text" id="fPaper" placeholder="e.g. Cost Accounting"></div>
+        <div><label>Year</label><input type="text" id="fYear" placeholder="e.g. 2024"></div>
+        <div><label>Marks Allocated</label><input type="number" id="fMarks" placeholder="e.g. 5"></div>
+      </div>
+      <div style="margin-bottom:12px;">
+        <label><input type="radio" name="fType" value="mcq" checked style="accent-color:var(--brass);"> Multiple Choice Question</label>
+        <label style="margin-left:16px;"><input type="radio" name="fType" value="descriptive" style="accent-color:var(--brass);"> Descriptive / Numerical Case</label>
+      </div>
+      <div style="margin-bottom:12px;"><label>Problem Statement</label><textarea id="fQuestion" placeholder="Provide problem statement verbatim..."></textarea></div>
+      
+      <div id="mcqFields">
+        <label>Options & Solution Mapping</label>
+        <div style="display:grid; gap:8px; margin-top:6px;">
+          <div style="display:flex; gap:8px; align-items:center;"><input type="radio" name="fCorrect" value="0" checked><input type="text" id="fOpt0" placeholder="Option A"></div>
+          <div style="display:flex; gap:8px; align-items:center;"><input type="radio" name="fCorrect" value="1"><input type="text" id="fOpt1" placeholder="Option B"></div>
+          <div style="display:flex; gap:8px; align-items:center;"><input type="radio" name="fCorrect" value="2"><input type="text" id="fOpt2" placeholder="Option C"></div>
+          <div style="display:flex; gap:8px; align-items:center;"><input type="radio" name="fCorrect" value="3"><input type="text" id="fOpt3" placeholder="Option D"></div>
+        </div>
+      </div>
+      <div id="descFields" style="display:none;"><label>Model Answer / Calculation Matrix</label><textarea id="fAnswer" placeholder="Map step-by-step verification logic..."></textarea></div>
+      
+      <div style="margin-top:16px; display:flex; gap:8px;"><button class="btn primary" id="addBtn">Append Entry</button><button class="btn ghost" id="clearBtn">Clear Fields</button></div>
+    </div>
+
+    <div id="addBulkForm" class="question-card" style="display:none;">
+      <p class="muted" style="margin-top:0; font-size:13px;">Format blocks clearly separated by a divider line consisting of three hyphens: <code>---</code>.</p>
+      <textarea id="bulkText" rows="12" placeholder="Level: Intermediate&#10;Paper: Cost Accounting&#10;Year: 2024&#10;Type: MCQ&#10;Marks: 1&#10;Q: Your test question here?&#10;A) Option One&#10;B) Option Two&#10;Correct: B&#10;---"></textarea>
+      <div style="margin-top:12px; display:flex; gap:8px;"><button class="btn primary" id="bulkPreviewBtn">Analyze Blocks</button><button class="btn primary" id="bulkImportBtn" style="display:none;">Execute Mass Import</button></div>
+      <div id="bulkPreviewArea" style="margin-top:16px;"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================ -->
+<!--             STICKY COMPARE TRAY              -->
+<!-- ============================================ -->
+<div id="tray">
+  <div style="display:flex; justify-content:space-between; align-items:center;">
+    <h3 id="trayTitle" style="margin:0; font-family:var(--font-mono); font-size:12px; text-transform:uppercase; color:var(--brass);">Comparative Ledger Matrix</h3>
+    <button class="btn ghost" id="trayClear" style="padding:4px 8px; font-size:11px;">Flush Selections</button>
+  </div>
+  <div class="compare-grid" id="compareGrid"></div>
+</div>
+
+<footer>Industrial Grade Accounting Ledger & Performance Terminal. Persistent state anchored via LocalStorage.</footer>
+
+<script>
+(function() {
+  /* ---- Pre-seeded Stocks & Core Data Arrays ---- */
+  const SECTORS = ["Technology","Healthcare","Financials","Consumer","Energy","Industrials","Utilities","Real Estate"];
+  const NAMES = {
+    AAPL:["Apple Inc.","Technology"], MSFT:["Microsoft Corp.","Technology"], GOOGL:["Alphabet Inc.","Technology"],
+    AMZN:["Amazon.com Inc.","Consumer"], NVDA:["NVIDIA Corp.","Technology"], META:["Meta Platforms","Technology"],
+    TSLA:["Tesla Inc.","Consumer"], BRK_B:["Berkshire Hathaway","Financials"], JPM:["JPMorgan Chase","Financials"],
+    UNH:["UnitedHealth Group","Healthcare"], XOM:["Exxon Mobil","Energy"], COST:["Costco Wholesale","Consumer"]
+  };
+  function seededRandom(seed){ let s = seed; return function(){ s = (s*9301+49297) % 233280; return s/233280; }; }
+  
+  const stocks = Object.entries(NAMES).map(([ticker,[name,sector]], i)=>{
+    const rnd = seededRandom(i*73 + 19);
+    const price = +(rnd()*500 + 15).toFixed(2);
+    const changePct = +((rnd()-0.48) * 7).toFixed(2);
+    const capB = +(rnd()*2200 + 10).toFixed(1);
+    const pe = +(rnd()*45 + 5).toFixed(1);
+    const div = +(rnd()*3.5).toFixed(2);
+    const vol = Math.round(rnd()*50 + 1);
+    return { ticker: ticker.replace('_','.'), name, sector, price, changePct, capB, pe, div, vol, high52:+(price*1.2).toFixed(2), low52:+(price*0.8).toFixed(2) };
+  });
+
+  const state = {
+    activeMasterTab: 'market',
+    market: { search:"", sectors:new Set(), capMin:null, capMax:null, priceMin:null, priceMax:null, move:"all", sortKey:"capB", sortDir:-1, selected:new Set() },
+    questions: [], attempts: [], sessions: [],
+    browse: { search:'', level:'all', paper:'all', year:'all', bookmarkedOnly:false, openId:null, confirmId:null },
+    practice: { phase:'setup', level:'all', paper:'all', year:'all', queue:[], index:0, score:0, selected:null, locked:false, revealed:false, selfMark:null },
+    mock: { phase:'setup', level:'all', paper:'all', year:'all', count:'10', timeLimit:'30', queue:[], answers:{}, idx:0, remainingSec:0, timerHandle:null, startedAt:null, finishedAt:null }
+  };
+
+  function uid() { return 'id_' + Math.random().toString(36).substring(2, 11); }
+  function esc(s) { return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  function badgeClass(l) { return l === 'Foundation' ? 'badge-foundation' : (l === 'Intermediate' ? 'badge-intermediate' : 'badge-final'); }
+  function formatDuration(sec) { if(sec<0||isNaN(sec)) return "00:00"; const m=Math.floor(sec/60), s=sec%60; return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0'); }
+
+  /* ---- LocalStorage Interface ---- */
+  async function loadData() {
+    const raw = localStorage.getItem('unified-ledger-suite-data');
+    if (raw) {
+      try {
+        const parsed = JSON.parse(raw);
+        state.questions = parsed.questions || [];
+        state.attempts = parsed.attempts || [];
+        state.sessions = parsed.sessions || [];
+      } catch(e) { console.error(e); }
+    }
+    if (!state.questions.length) {
+      state.questions = [
+        { id: uid(), level: 'Intermediate', paper: 'Cost Accounting', year: '2023', type: 'descriptive', marks: 5, bookmarked: false, question: 'Explain the treatment of normal and abnormal loss in process costing, and how each affects the cost per unit of output.', answer: 'Normal loss is expected under efficient operating conditions. Its cost is absorbed by the good units produced, raising the cost per unit of the remaining output. Abnormal loss is the loss over and above the normal allowance; it is valued at the same rate as good units and transferred to the Costing Profit and Loss Account, so it does not inflate the cost of good units.' },
+        { id: uid(), level: 'Intermediate', paper: 'Cost Accounting', year: '2024', type: 'mcq', marks: 1, bookmarked: false, question: 'When calculating Labour Variance, if Actual Hours worked match Standard Hours but Actual Rate exceeds Standard Rate, the resulting variance is:', options: ['Favourable Efficiency Variance', 'Adverse Efficiency Variance', 'Adverse Rate Variance', 'Favourable Rate Variance'], correctIndex: 2, answer: 'Because actual rate exceeds standard rate paid out, it triggers an Adverse Labour Rate Variance regardless of hour allocations.' },
+        { id: uid(), level: 'Final', paper: 'Strategic Cost Management', year: '2024', type: 'descriptive', marks: 8, bookmarked: false, question: 'What is target costing, and how does it differ from traditional cost-plus pricing in a competitive market?', answer: 'Target costing starts from a market-determined selling price and desired profit margin, working backward to establish maximum allowable cost. Cost-plus pricing works forward from actual manufacturing expenditures incurred.' }
+      ];
+      await saveData();
+    }
+  }
+  async function saveData() {
+    localStorage.setItem('unified-ledger-suite-data', JSON.stringify({ questions: state.questions, attempts: state.attempts, sessions: state.sessions }));
+  }
+
+  /* ---- Master Tab Routing System ---- */
+  document.querySelectorAll('[data-master]').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('[data-master]').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+      tab.classList.add('active');
+      state.activeMasterTab = tab.dataset.master;
+      document.getElementById('panel-' + state.activeMasterTab).classList.add('active');
+      if (state.activeMasterTab === 'study') { initStudyContext(); }
+      else { renderMarketModule(); }
+    });
+  });
+
+  /* ---- Module 1: Market Terminal Core ---- */
+  function initMarketModule() {
+    const parent = document.getElementById('mSectorChips');
+    parent.innerHTML = '';
+    SECTORS.forEach(sec => {
+      const chip = document.createElement('div');
+      chip.className = 'chip'; chip.textContent = sec;
+      chip.onclick = () => {
+        if (state.market.sectors.has(sec)) state.market.sectors.delete(sec);
+        else state.market.sectors.add(sec);
+        chip.classList.toggle('active');
+        renderMarketModule();
+      };
+      parent.appendChild(chip);
+    });
+
+    document.getElementById('mMoveChips').addEventListener('click', e => {
+      const target = e.target.closest('.chip'); if (!target) return;
+      state.market.move = target.dataset.move;
+      document.querySelectorAll('#mMoveChips .chip').forEach(c => c.classList.remove('active'));
+      target.classList.add('active');
+      renderMarketModule();
+    });
+
+    ['mCapMin','mCapMax','mPriceMin','mPriceMax'].forEach(id => {
+      document.getElementById(id).addEventListener('input', e => {
+        const val = e.target.value;
+        state.market[id.replace('m', '').replace(/^\w/, c => c.toLowerCase())] = val === "" ? null : parseFloat(val);
+        renderMarketModule();
+      });
+    });
+
+    document.getElementById('mSearchBox').addEventListener('input', e => {
+      state.market.search = e.target.value.trim().toLowerCase();
+      renderMarketModule();
+    });
+
+    document.getElementById('mResetBtn').addEventListener('click', () => {
+      state.market = { search:"", sectors:new Set(), capMin:null, capMax:null, priceMin:null, priceMax:null, move:"all", sortKey:"capB", sortDir:-1, selected:state.market.selected };
+      document.getElementById('mSearchBox').value = '';
+      ['mCapMin','mCapMax','mPriceMin','mPriceMax'].forEach(id => document.getElementById(id).value = '');
+      document.querySelectorAll('#mSectorChips .chip').forEach(c => c.classList.remove('active'));
+      document.querySelectorAll('#mMoveChips .chip').forEach(c => c.classList.remove('active'));
+      document.querySelector('#mMoveChips .chip[data-move=all]').classList.add('active');
+      renderMarketModule();
+    });
+
+    renderTickerTape();
+    renderMarketModule();
+  }
+
+  function renderTickerTape() {
+    const track = document.getElementById('tickerTrack');
+    const nodes = stocks.slice(0, 8).map(s => {
+      const cls = s.changePct >= 0 ? 'tk-up' : 'tk-dn';
+      return `<span><b>${s.ticker}</b>$${s.price.toFixed(2)} <span class="${cls}">${s.changePct >= 0 ? '▲':'▼'} ${Math.abs(s.changePct).toFixed(2)}%</span></span>`;
+    }).join('');
+    track.innerHTML = nodes + nodes;
+  }
+
+  const MARKET_COLS = [
+    {key:'chk', label:''}, {key:'ticker', label:'Symbol'}, {key:'sector', label:'Sector'},
+    {key:'price', label:'Price'}, {key:'changePct', label:'Change'}, {key:'capB', label:'Market Cap'}, {key:'pe', label:'P/E'}
+  ];
+
+  function renderMarketModule() {
+    const headRow = document.getElementById('mHeadRow');
+    headRow.innerHTML = MARKET_COLS.map(c => {
+      if (c.key === 'chk') return `<th></th>`;
+      const active = state.market.sortKey === c.key;
+      return `<th class="${active?'sorted':''}" data-sort="${c.key}">${c.label} ${active ? (state.market.sortDir===1?'▲':'▼') : ''}</th>`;
+    }).join('');
+
+    headRow.querySelectorAll('th[data-sort]').forEach(th => {
+      th.onclick = () => {
+        const key = th.dataset.sort;
+        if (state.market.sortKey === key) state.market.sortDir *= -1;
+        else { state.market.sortKey = key; state.market.sortDir = -1; }
+        renderMarketModule();
+      };
+    });
+
+    const filtered = stocks.filter(s => {
+      const sk = state.market;
+      if (sk.search && !(s.ticker.toLowerCase().includes(sk.search) || s.name.toLowerCase().includes(sk.search))) return false;
+      if (sk.sectors.size && !sk.sectors.has(s.sector)) return false;
+      if (sk.capMin != null && s.capB < sk.capMin) return false;
+      if (sk.capMax != null && s.capB > sk.capMax) return false;
+      if (sk.priceMin != null && s.price < sk.priceMin) return false;
+      if (sk.priceMax != null && s.price > sk.priceMax) return false;
+      if (sk.move === 'gainers' && s.changePct <= 0) return false;
+      if (sk.move === 'losers' && s.changePct >= 0) return false;
+      return true;
+    }).sort((a,b) => (a[state.market.sortKey] > b[state.market.sortKey] ? 1 : -1) * state.market.sortDir);
+
+    document.getElementById('mResultCount').textContent = `${filtered.length} / ${stocks.length} Stocks Listed`;
+    document.getElementById('mEmptyState').style.display = filtered.length ? 'none' : 'block';
+
+    const tbody = document.getElementById('mTableBody');
+    tbody.innerHTML = filtered.map(s => {
+      const isSel = state.market.selected.has(s.ticker);
+      return `<tr class="${isSel?'selected':''}" data-t="${s.ticker}">
+        <td><input type="checkbox" class="chk" ${isSel?'checked':''} data-t="${s.ticker}"></td>
+        <td><span style="font-weight:600; color:var(--brass);">${s.ticker}</span><div style="font-size:11px; color:var(--muted);">${s.name}</div></td>
+        <td><span class="badge badge-foundation" style="font-size:10px;">${s.sector}</span></td>
+        <td>$${s.price.toFixed(2)}</td>
+        <td class="${s.changePct>=0?'pos':'neg'}">${s.changePct >= 0 ? '+' : ''}${s.changePct.toFixed(2)}%</td>
+        <td>${s.capB >= 1000 ? (s.capB/1000).toFixed(2)+'T' : s.capB.toFixed(1)+'B'}</td>
+        <td>${s.pe.toFixed(1)}</td>
+      </tr>`;
+    }).join('');
+
+    const handler = (ticker) => {
+      if (state.market.selected.has(ticker)) state.market.selected.delete(ticker);
+      else {
+        if (state.market.selected.size >= 4) { alert('Maximum array width reached. Limit comparison tracking to 4 entries.'); return; }
+        state.market.selected.add(ticker);
+      }
+      renderMarketModule();
+      renderTrayModule();
+    };
+
+    tbody.querySelectorAll('tr').forEach(tr => {
+      tr.onclick = (e) => { if(!e.target.classList.contains('chk')) handler(tr.dataset.t); };
+    });
+    tbody.querySelectorAll('.chk').forEach(c => {
+      c.onclick = (e) => { e.stopPropagation(); handler(c.dataset.t); };
+    });
+  }
+
+  function renderTrayModule() {
+    const tray = document.getElementById('tray');
+    const arr = [...state.market.selected].map(t => stocks.find(s => s.ticker === t)).filter(Boolean);
+    document.getElementById('trayTitle').textContent = `Comparative Matrix (${arr.length} Selected / Max 4)`;
+    
+    if (!arr.length) { tray.classList.remove('open'); return; }
+    tray.classList.add('open');
+
+    const staticRows = [
+      ['Price', s => `$${s.price.toFixed(2)}`],
+      ['Daily Move', s => `${s.changePct>=0?'+':''}${s.changePct.toFixed(2)}%`, s => s.changePct>=0?'pos':'neg'],
+      ['P/E Metric', s => s.pe.toFixed(1)],
+      ['52W Ceiling', s => `$${s.high52.toFixed(2)}`],
+      ['52W Floor', s => `$${s.low52.toFixed(2)}`]
+    ];
+
+    document.getElementById('compareGrid').innerHTML = arr.map(s => `
+      <div class="compare-col">
+        <div class="cticker"><b>${s.ticker}</b><span class="remove-x" style="cursor:pointer; color:var(--neg);" data-rem="${s.ticker}">✕</span></div>
+        <div style="font-size:11px; color:var(--muted); margin-bottom:8px; overflow:hidden; white-space:nowrap; text-overflow:ellipsis;">${s.name}</div>
+        ${staticRows.map(([lbl, fn, cFn]) => `
+          <div class="compare-row">
+            <span class="lbl" style="color:var(--muted);">${lbl}</span>
+            <span class="val ${cFn?cFn(s):''}">${fn(s)}</span>
+          </div>
+        `).join('')}
+      </div>
+    `).join('');
+
+    document.querySelectorAll('.remove-x').forEach(btn => {
+      btn.onclick = () => { state.market.selected.delete(btn.dataset.rem); renderMarketModule(); renderTrayModule(); };
+    });
+  }
+  document.getElementById('trayClear').onclick = () => { state.market.selected.clear(); renderMarketModule(); renderTrayModule(); };
+
+
+  /* ---- Module 2: Academic Ledger Core ---- */
+  function initStudyContext() {
+    document.querySelectorAll('[data-sub]').forEach(btn => {
+      btn.onclick = () => {
+        document.querySelectorAll('[data-sub]').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.subpanel').forEach(p => styleBlock(p, 'none'));
+        btn.classList.add('active');
+        const activeSub = btn.dataset.sub;
+        styleBlock(document.getElementById('sub-' + activeSub), 'block');
+        
+        if (activeSub === 'browse') renderBrowseSubpanel();
+        else if (activeSub === 'practice') renderPracticeSubpanel();
+        else if (activeSub === 'mock') renderMockSubpanel();
+        else if (activeSub === 'progress') renderProgressSubpanel();
+      };
+    });
+    
+    // Wire sorting selectors dynamically
+    ['bLevel', 'bPaper', 'bYear'].forEach(id => {
+      document.getElementById(id).onchange = () => {
+        state.browse[id.replace('b', '').replace(/^\w/, c => c.toLowerCase())] = document.getElementById(id).value;
+        renderBrowseSubpanel();
+      };
+    });
+    document.getElementById('bSearch').oninput = (e) => { state.browse.search = e.target.value.trim().toLowerCase(); renderBrowseSubpanel(); };
+    document.getElementById('bBookmarked').onchange = (e) => { state.browse.bookmarkedOnly = e.target.checked; renderBrowseSubpanel(); };
+
+    populateBrowseSelectors();
+    renderBrowseSubpanel();
+  }
+
+  function styleBlock(el, val) { if(el) el.style.display = val; }
+  function distinct(f) { return [...new Set(state.questions.map(q => q[f]).filter(Boolean))].sort(); }
+  
+  function populateBrowseSelectors() {
+    const build = (el, arr, def) => { el.innerHTML = `<option value="all">${def}</option>` + arr.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join(''); };
+    build(document.getElementById('bLevel'), ['Foundation','Intermediate','Final'], 'All Levels');
+    build(document.getElementById('bPaper'), distinct('paper'), 'All Subjects');
+    build(document.getElementById('bYear'), distinct('year'), 'All Years');
+  }
+
+  function checkFilters(q, filterSet) {
+    if (filterSet.level !== 'all' && q.level !== filterSet.level) return false;
+    if (filterSet.paper !== 'all' && q.paper !== filterSet.paper) return false;
+    if (filterSet.year !== 'all' && q.year !== filterSet.year) return false;
+    if (filterSet.search && !q.question.toLowerCase().includes(filterSet.search)) return false;
+    if (filterSet.bookmarkedOnly && !q.bookmarked) return false;
+    return true;
+  }
+
+  function renderBrowseSubpanel() {
+    const arr = state.questions.filter(q => checkFilters(q, state.browse));
+    document.getElementById('bCount').textContent = `Displaying ${arr.length} of ${state.questions.length} Questions`;
+    
+    const wrapper = document.getElementById('bList');
+    if (!arr.length) {
+      wrapper.innerHTML = `<div style="text-align:center; padding:32px;" class="muted">No targeted metrics match your selection filters.</div>`;
+      return;
+    }
+
+    wrapper.innerHTML = arr.map((q, idx) => {
+      const isOpen = state.browse.openId === q.id;
+      let renderPayload = '';
+      if (q.type === 'mcq') {
+        renderPayload = q.options.map((o, oIdx) => `<div class="option-line ${oIdx === q.correctIndex ? 'correct':''}">${esc(o)}</div>`).join('');
+      }
+      if (q.answer) renderPayload += `<div class="answer-block"><b>Verification Profile:</b><br>${esc(q.answer)}</div>`;
+
+      return `<div class="entry ${isOpen?'open':''}" data-serial="${String(idx+1).padStart(2,'0')}" data-oid="${q.id}">
+        <div class="entry-head">
+          <span class="badge ${badgeClass(q.level)}">${esc(q.level)}</span>
+          <span style="font-family:var(--font-mono); font-size:12px; color:var(--brass-bright);">${esc(q.paper)}</span>
+          <span class="muted" style="font-size:11px;">Term: ${esc(q.year)} [Weight: ${q.marks||1}M]</span>
+          <button class="star-btn ${q.bookmarked?'':'off'}" data-sid="${q.id}">${q.bookmarked?'★':'☆'}</button>
+        </div>
+        <p class="entry-q">${esc(q.question)}</p>
+        <div class="entry-body">
+          ${renderPayload}
+          <div style="margin-top:12px; text-align:right;"><button class="btn danger" style="padding:4px 8px; font-size:11px;" data-del="${q.id}">Purge Entry</button></div>
+        </div>
+      </div>`;
+    }).join('');
+
+    wrapper.querySelectorAll('.entry').forEach(el => {
+      el.onclick = (e) => {
+        if(e.target.closest('.star-btn, .btn')) return;
+        const id = el.dataset.oid;
+        state.browse.openId = state.browse.openId === id ? null : id;
+        renderBrowseSubpanel();
+      };
+    });
+
+    wrapper.querySelectorAll('[data-sid]').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const target = state.questions.find(x => x.id === btn.dataset.sid);
+        if(target) { target.bookmarked = !target.bookmarked; await saveData(); renderBrowseSubpanel(); }
+      };
+    });
+
+    wrapper.querySelectorAll('[data-del]').forEach(btn => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        state.questions = state.questions.filter(x => x.id !== btn.dataset.del);
+        await saveData(); populateBrowseSelectors(); renderBrowseSubpanel();
+      };
+    });
+  }
+
+  /* ---- Subpanel: Practice System ---- */
+  function renderPracticeSubpanel() {
+    const area = document.getElementById('practiceArea');
+    const p = state.practice;
+    if (p.phase === 'setup') {
+      area.innerHTML = `<div class="question-card">
+        <h3>Configure Queue Parameters</h3>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px;">
+          <div><label>Level</label><select id="pLevel"><option value="all">All Levels</option><option>Foundation</option><option>Intermediate</option><option>Final</option></select></div>
+          <div><label>Paper Subject</label><select id="pPaper"></select></div>
+          <div><label>Year</label><select id="pYear"></select></div>
+        </div>
+        <button class="btn primary" id="pStartBtn">Initialize Session</button>
+      </div>`;
+      
+      const distinctStudy = (f) => [...new Set(state.questions.map(q => q[f]).filter(Boolean))].sort();
+      const loadOpts = (el, data) => { el.innerHTML = `<option value="all">All Profiles</option>` + data.map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join(''); };
+      loadOpts(document.getElementById('pPaper'), distinctStudy('paper'));
+      loadOpts(document.getElementById('pYear'), distinctStudy('year'));
+      
+      document.getElementById('pStartBtn').onclick = () => {
+        p.level = document.getElementById('pLevel').value;
+        p.paper = document.getElementById('pPaper').value;
+        p.year = document.getElementById('pYear').value;
+        
+        const matched = state.questions.filter(q => checkFilters(q, p));
+        if(!matched.length) { alert('Null set matches requested configuration bounds.'); return; }
+        
+        p.queue = matched.map(x => x.id).sort(() => Math.random() - 0.5);
+        p.index = 0; p.score = 0; p.phase = 'active';
+        p.selected = null; p.locked = false; p.revealed = false; p.selfMark = null;
+        renderPracticeSubpanel();
+      };
+      return;
+    }
+
+    if (p.phase === 'active') {
+      const q = state.questions.find(x => x.id === p.queue[p.index]);
+      let choicesMarkup = '';
+      
+      if (q.type === 'mcq') {
+        choicesMarkup = q.options.map((o, idx) => {
+          let cls = 'opt-btn';
+          if (p.locked) { if(idx === q.correctIndex) cls += ' correct'; else if(idx === p.selected) cls += ' wrong'; }
+          else if (p.selected === idx) cls += ' selected';
+          return `<button class="${cls}" data-oidx="${idx}" ${p.locked?'disabled':''}>${esc(o)}</button>`;
+        }).join('');
+      } else {
+        if (!p.revealed) {
+          choicesMarkup = `<button class="btn primary" id="pReveal">Evaluate Formula Verification Model</button>`;
+        } else {
+          choicesMarkup = `<div class="answer-block"><b>System Analysis Blueprint:</b><br>${esc(q.answer)}</div>
+            ${p.selfMark === null ? `
+              <div style="margin-top:12px; display:flex; gap:8px; align-items:center;">
+                <span class="muted">Reconciliation Status:</span>
+                <button class="btn primary" id="pSelfYes" style="padding:4px 10px;">Accurate</button>
+                <button class="btn danger" id="pSelfNo" style="padding:4px 10px;">Variance Detected</button>
+              </div>
+            ` : `<div class="stamp ${p.selfMark?'ok':'bad'}">${p.selfMark?'Favourable':'Adverse Variance'}</div>`}`;
+        }
+      }
+
+      area.innerHTML = `<div class="question-card">
+        <div style="display:flex; justify-content:between; font-family:var(--font-mono); font-size:12px; margin-bottom:12px;" class="muted">
+          <span>Active Session Matrix: [${p.index + 1} / ${p.queue.length}]</span>
+          <span style="margin-left:auto;">Score Tally: ${p.score}</span>
+        </div>
+        <div style="margin-bottom:8px;"><span class="badge ${badgeClass(q.level)}">${q.level}</span> <b style="color:var(--brass);">${q.paper}</b></div>
+        <p class="entry-q" style="font-size:16px;">${esc(q.question)}</p>
+        <div style="margin-top:16px;">${choicesMarkup}</div>
+        
+        ${p.locked && q.type==='mcq' ? `<div class="stamp ${p.selected === q.correctIndex?'ok':'bad'}">${p.selected === q.correctIndex?'Favourable':'Adverse'}</div>` : ''}
+        
+        <div style="margin-top:24px; border-top:1px solid var(--line); padding-top:12px; display:flex; justify-content:space-between;">
+          <button class="btn ghost" id="pAbort">Terminate Queue</button>
+          ${p.locked || p.selfMark !== null ? `<button class="btn primary" id="pNext">Progress Queue ➔</button>` : ''}
+        </div>
+      </div>`;
+
+      area.querySelectorAll('[data-oidx]').forEach(btn => {
+        btn.onclick = () => {
+          p.selected = parseInt(btn.dataset.oidx); p.locked = true;
+          const isCorrect = p.selected === q.correctIndex;
+          if (isCorrect) p.score++;
+          state.attempts.push({ id:uid(), questionId:q.id, paper:q.paper, level:q.level, correct:isCorrect, ts:Date.now() });
+          saveData(); renderPracticeSubpanel();
+        };
+      });
+
+      if (document.getElementById('pReveal')) document.getElementById('pReveal').onclick = () => { p.revealed = true; renderPracticeSubpanel(); };
+      if (document.getElementById('pSelfYes')) document.getElementById('pSelfYes').onclick = () => { p.selfMark = true; p.score++; state.attempts.push({ id:uid(), questionId:q.id, paper:q.paper, level:q.level, correct:true, ts:Date.now() }); saveData(); renderPracticeSubpanel(); };
+      if (document.getElementById('pSelfNo')) document.getElementById('pSelfNo').onclick = () => { p.selfMark = false; state.attempts.push({ id:uid(), questionId:q.id, paper:q.paper, level:q.level, correct:false, ts:Date.now() }); saveData(); renderPracticeSubpanel(); };
+      
+      document.getElementById('pAbort').onclick = () => { p.phase = 'setup'; renderPracticeSubpanel(); };
+      if (document.getElementById('pNext')) {
+        document.getElementById('pNext').onclick = () => {
+          p.index++;
+          if (p.index >= p.queue.length) { p.phase = 'summary'; }
+          else { p.selected = null; p.locked = false; p.revealed = false; p.selfMark = null; }
+          renderPracticeSubpanel();
+        };
+      }
+      return;
+    }
+
+    if (p.phase === 'summary') {
+      area.innerHTML = `<div class="question-card" style="text-align:center;">
+        <h2 style="font-family:var(--font-display); color:var(--brass);">Session Concluded</h2>
+        <div style="font-size:36px; font-family:var(--font-mono); margin:16px 0;">${p.score} / ${p.queue.length}</div>
+        <p class="muted">Accuracy Performance: ${Math.round((p.score/p.queue.length)*100)}%</p>
+        <button class="btn primary" id="pResetSummary" style="margin-top:12px;">Return to Configuration</button>
+      </div>`;
+      document.getElementById('pResetSummary').onclick = () => { p.phase = 'setup'; renderPracticeSubpanel(); };
+    }
+  }
+
+  /* ---- Subpanel: Timed Mock Simulation ---- */
+  function renderMockSubpanel() {
+    const area = document.getElementById('mockArea');
+    const m = state.mock;
+    
+    if (m.phase === 'setup') {
+      const distinctStudy = (f) => [...new Set(state.questions.map(q => q[f]).filter(Boolean))].sort();
+      area.innerHTML = `<div class="question-card">
+        <h3>Exam Simulation Suite</h3>
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap:12px; margin-bottom:16px;">
+          <div><label>Target Level</label><select id="mLevel"><option value="all">All Levels</option><option>Foundation</option><option>Intermediate</option><option>Final</option></select></div>
+          <div><label>Subject Scope</label><select id="mPaper"></select></div>
+          <div><label>Simulation Length</label><select id="mTime"><option value="10">10 Minutes</option><option value="30" selected>30 Minutes</option><option value="60">60 Minutes</option></select></div>
+        </div>
+        <button class="btn primary" id="mStartBtn">Begin Assessment Matrix</button>
+      </div>`;
+      
+      const pSel = document.getElementById('mPaper');
+      pSel.innerHTML = `<option value="all">Comprehensive Scope</option>` + distinctStudy('paper').map(v=>`<option value="${esc(v)}">${esc(v)}</option>`).join('');
+      
+      document.getElementById('mStartBtn').onclick = () => {
+        m.level = document.getElementById('mLevel').value;
+        m.paper = pSel.value;
+        m.year = 'all';
+        
+        const pooled = state.questions.filter(q => checkFilters(q, m));
+        if (!pooled.length) { alert('Insufficient questions found inside target configuration parameter array.'); return; }
+        
+        m.queue = pooled.slice(0, 10).map(x => x.id);
+        m.answers = {}; m.queue.forEach(id => { m.answers[id] = { selected:null, typed:'' }; });
+        m.idx = 0; m.startedAt = Date.now(); m.phase = 'active';
+        m.remainingSec = parseInt(document.getElementById('mTime').value) * 60;
+        
+        if (m.timerHandle) clearInterval(m.timerHandle);
+        m.timerHandle = setInterval(() => {
+          m.remainingSec--;
+          const timerDisplay = document.getElementById('mockClock');
+          if (timerDisplay) {
+            timerDisplay.textContent = formatDuration(m.remainingSec);
+            if (m.remainingSec <= 60) timerDisplay.style.color = 'var(--neg)';
+          }
+          if (m.remainingSec <= 0) finalizeMockExecution();
+        }, 1000);
+        
+        renderMockSubpanel();
+      };
+      return;
+    }
+
+    if (m.phase === 'active') {
+      const q = state.questions.find(x => x.id === m.queue[m.idx]);
+      const ans = m.answers[q.id];
+      
+      const navPills = m.queue.map((id, i) => {
+        const isCurrent = i === m.idx;
+        const isDone = m.answers[id].selected !== null || m.answers[id].typed.trim() !== '';
+        return `<button class="subtab ${isCurrent?'active':''}" style="${isDone && !isCurrent ? 'border-color:var(--brass);':''}" data-jump="${i}">${i+1}</button>`;
+      }).join('');
+
+      area.innerHTML = `<div class="question-card">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+          <div style="font-family:var(--font-mono); font-size:18px; color:var(--brass);" id="mockClock">${formatDuration(m.remainingSec)}</div>
+          <button class="btn danger" id="mSubmitBtn" style="padding:4px 10px;">Submit Matrix</button>
+        </div>
+        <div style="display:flex; gap:4px; margin-bottom:16px; flex-wrap:wrap;">${navPills}</div>
+        
+        <div style="margin-bottom:8px;"><span class="badge ${badgeClass(q.level)}">${q.level}</span> <span class="muted">${q.paper}</span></div>
+        <p class="entry-q" style="font-size:16px;">${esc(q.question)}</p>
+        
+        <div style="margin-top:16px;">
+          ${q.type==='mcq' ? 
+            q.options.map((o, idx) => `<button class="opt-btn ${ans.selected===idx?'selected':''}" data-moidx="${idx}">${esc(o)}</button>`).join('')
+            : `<textarea id="mTextAns" placeholder="Map logic computations details here...">${esc(ans.typed)}</textarea>`
+          }
+        </div>
+        
+        <div style="display:flex; justify-content:space-between; margin-top:24px;">
+          <button class="btn ghost" id="mPrev" ${m.idx===0?'disabled':''}>◀ Previous</button>
+          <button class="btn ghost" id="mNext" ${m.idx===m.queue.length-1?'disabled':''}>Next ▶</button>
+        </div>
+      </div>`;
+
+      area.querySelectorAll('[data-jump]').forEach(btn => { btn.onclick = () => { m.idx = parseInt(btn.dataset.jump); renderMockSubpanel(); }; });
+      area.querySelectorAll('[data-moidx]').forEach(btn => { btn.onclick = () => { ans.selected = parseInt(btn.dataset.moidx); renderMockSubpanel(); }; });
+      const txt = document.getElementById('mTextAns'); if(txt) txt.oninput = () => { ans.typed = txt.value; };
+      
+      document.getElementById('mPrev').onclick = () => { if(m.idx > 0) { m.idx--; renderMockSubpanel(); } };
+      document.getElementById('mNext').onclick = () => { if(m.idx < m.queue.length-1) { m.idx++; renderMockSubpanel(); } };
+      document.getElementById('mSubmitBtn').onclick = () => { if(confirm('Execute formal ledger finalization protocol for this test matrix?')) finalizeMockExecution(); };
+      return;
+    }
+
+    if (m.phase === 'review') {
+      let tallyHtml = '';
+      m.queue.forEach((id, idx) => {
+        const q = state.questions.find(x => x.id === id);
+        const ans = m.answers[id];
+        const isMcq = q.type === 'mcq';
+        const isCorrect = isMcq ? ans.selected === q.correctIndex : null;
+        
+        tallyHtml += `<div class="entry open" data-serial="${String(idx+1).padStart(2,'0')}">
+          <div class="entry-head"><span class="badge ${badgeClass(q.level)}">${q.level}</span> <span class="muted">${q.paper}</span></div>
+          <p class="entry-q">${esc(q.question)}</p>
+          <div class="entry-body">
+            ${isMcq ? `
+              <div class="option-line ${q.correctIndex===ans.selected?'correct':''}">${esc(q.options[ans.selected] || '[No Answer Selection Input Received]')}</div>
+              <div class="stamp ${isCorrect?'ok':'bad'}">${isCorrect?'Favourable Calculation':'Adverse Account Entry'}</div>
+            ` : `
+              <div class="answer-block"><b>Your input vector:</b><br>${esc(ans.typed || '[Null Input]')}</div>
+            `}
+            <div class="answer-block"><b>System Analysis Blueprint Matrix:</b><br>${esc(q.answer)}</div>
+            
+            ${!isMcq ? `
+              <div style="margin-top:8px; display:flex; gap:8px;">
+                <button class="btn primary" style="padding:4px 8px;" data-mcyes="${id}">Reconciliation Valid</button>
+                <button class="btn danger" style="padding:4px 8px;" data-mcno="${id}">Adverse Variance</button>
+              </div>
+            ` : ''}
+          </div>
+        </div>`;
+      });
+
+      area.innerHTML = `<h3>Review Mode</h3><div style="margin-bottom:16px;">${tallyHtml}</div>
+        <button class="btn primary" id="mCompleteSuiteBtn">Store and Archive Analysis Profile</button>`;
+      
+      area.querySelectorAll('[data-mcyes]').forEach(b => b.onclick = () => { m.answers[b.dataset.mcyes].override = true; b.parentElement.innerHTML = '<span class="pos">Marked Valid</span>'; });
+      area.querySelectorAll('[data-mcno]').forEach(b => b.onclick = () => { m.answers[b.dataset.mcno].override = false; b.parentElement.innerHTML = '<span class="neg">Marked Adverse</span>'; });
+      
+      document.getElementById('mCompleteSuiteBtn').onclick = async () => {
+        let sc = 0;
+        m.queue.forEach(id => {
+          const q = state.questions.find(x => x.id === id);
+          const ans = m.answers[id];
+          let ok = q.type === 'mcq' ? ans.selected === q.correctIndex : !!ans.override;
+          if (ok) sc++;
+          state.attempts.push({ id:uid(), questionId:q.id, paper:q.paper, level:q.level, correct:ok, ts:Date.now() });
+        });
+        state.sessions.push({ id:uid(), ts:Date.now(), total:m.queue.length, score:sc, timeSpent:(Date.now()-m.startedAt)/1000 });
+        await saveData();
+        m.phase = 'setup';
+        renderMockSubpanel();
+      };
+    }
+  }
+
+  function finalizeMockExecution() {
+    if(state.mock.timerHandle) clearInterval(state.mock.timerHandle);
+    state.mock.phase = 'review';
+    renderMockSubpanel();
+  }
+
+  /* ---- Subpanel: Analytics Progress Panel ---- */
+  function renderProgressSubpanel() {
+    const parent = document.getElementById('progressArea');
+    if (!state.attempts.length && !state.sessions.length) {
+      parent.innerHTML = `<div class="muted" style="text-align:center; padding:32px;">No analytical verification vectors exist yet. Execute practices modules.</div>`;
+      return;
+    }
+
+    const accuracy = state.attempts.length ? Math.round((state.attempts.filter(x=>x.correct).length / state.attempts.length)*100) : 0;
+    
+    // Compute performance grouped cleanly by Subject Paper
+    const subjectsMap = {};
+    state.attempts.forEach(a => {
+      if(!subjectsMap[a.paper]) subjectsMap[a.paper] = { total: 0, ok: 0 };
+      subjectsMap[a.paper].total++;
+      if (a.correct) subjectsMap[a.paper].ok++;
+    });
+
+    let barsHtml = '';
+    Object.entries(subjectsMap).forEach(([paper, data]) => {
+      const pct = Math.round((data.ok / data.total) * 100);
+      const trackColor = pct < 50 ? 'var(--neg)' : (pct < 75 ? 'var(--brass)' : 'var(--pos)');
+      barsHtml += `<div class="progress-row">
+        <div style="width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${esc(paper)}</div>
+        <div class="bar-track"><div class="bar-fill" style="width:${pct}%; background:${trackColor};"></div></div>
+        <div style="width:40px; text-align:right; font-family:var(--font-mono); font-size:12px;">${pct}%</div>
+      </div>`;
+    });
+
+    parent.innerHTML = `
+      <div class="stat-grid">
+        <div class="stat-tile"><div class="big">${state.attempts.length}</div><div class="lbl">Total Audit Drills</div></div>
+        <div class="stat-tile"><div class="big">${accuracy}%</div><div class="lbl">Accuracy Rating</div></div>
+        <div class="stat-tile"><div class="big">${state.sessions.length}</div><div class="lbl">Mock Runs Conducted</div></div>
+      </div>
+      <div class="question-card">
+        <h3>Variances Matrix Grouped By Subject</h3>
+        <div style="margin-top:16px;">${barsHtml}</div>
+      </div>
+    `;
+  }
+
+  /* ---- Subpanel: Entry Add / Importer Room ---- */
+  function initAddModule() {
+    document.querySelectorAll('input[name=addMode]').forEach(r => {
+      r.onchange = () => {
+        const val = r.value;
+        styleBlock(document.getElementById('addSingleForm'), val === 'single' ? 'block':'none');
+        styleBlock(document.getElementById('addBulkForm'), val === 'bulk' ? 'block':'none');
+      };
+    });
+
+    document.querySelectorAll('input[name=fType]').forEach(r => {
+      r.onchange = () => {
+        const isMcq = r.value === 'mcq';
+        styleBlock(document.getElementById('mcqFields'), isMcq ? 'block':'none');
+        styleBlock(document.getElementById('descFields'), isMcq ? 'none':'block');
+      };
+    });
+
+    document.getElementById('clearBtn').onclick = () => {
+      document.getElementById('fPaper').value = ''; document.getElementById('fYear').value = ''; document.getElementById('fMarks').value = '';
+      document.getElementById('fQuestion').value = ''; document.getElementById('fAnswer').value = '';
+      ['fOpt0','fOpt1','fOpt2','fOpt3'].forEach(id=>document.getElementById(id).value='');
+    };
+
+    document.getElementById('addBtn').onclick = async () => {
+      const paper = document.getElementById('fPaper').value.trim();
+      const year = document.getElementById('fYear').value.trim();
+      const question = document.getElementById('fQuestion').value.trim();
+      if(!paper || !year || !question) { alert('Validation error: Required structure parameters missing.'); return; }
+      
+      const type = document.querySelector('input[name=fType]:checked').value;
+      const entry = { id:uid(), level:document.getElementById('fLevel').value, paper, year, type, marks:parseInt(document.getElementById('fMarks').value)||1, question, bookmarked:false };
+      
+      if(type==='mcq') {
+        entry.options = ['fOpt0','fOpt1','fOpt2','fOpt3'].map(id=>document.getElementById(id).value.trim());
+        entry.correctIndex = parseInt(document.querySelector('input[name=fCorrect]:checked').value);
+      } else {
+        entry.answer = document.getElementById('fAnswer').value.trim();
+      }
+      
+      state.questions.push(entry);
+      await saveData();
+      alert('Entry stored successfully into the register file context layer.');
+      document.getElementById('clearBtn').click();
+    };
+
+    /* Bulk Parsing Parser Block */
+    document.getElementById('bulkPreviewBtn').onclick = () => {
+      const text = document.getElementById('bulkText').value;
+      const chunks = text.split(/\n\s*-{3,}\s*\n/).map(c=>c.trim()).filter(Boolean);
+      const parsed = [];
+      
+      chunks.forEach((chunk, cIdx) => {
+        const lines = chunk.split('\n');
+        let obj = { type:'mcq', options:[], question:'', answer:'' };
+        lines.forEach(l => {
+          let m;
+          if (m = l.match(/^level\s*:\s*(.+)$/i)) obj.level = m[1].trim();
+          else if (m = l.match(/^paper\s*:\s*(.+)$/i)) obj.paper = m[1].trim();
+          else if (m = l.match(/^year\s*:\s*(.+)$/i)) obj.year = m[1].trim();
+          else if (m = l.match(/^(?:q|question)\s*:\s*(.*)$/i)) obj.question = m[1].trim();
+          else if (m = l.match(/^answer\s*:\s*(.*)$/i)) { obj.answer = m[1].trim(); obj.type='descriptive'; }
+          else if (m = l.match(/^([A-D])\)\s*(.+)$/i)) obj.options.push(m[2].trim());
+          else if (m = l.match(/^correct\s*:\s*([A-D])/i)) obj.correctIndex = m[1].toUpperCase().charCodeAt(0) - 65;
+        });
+        
+        if(obj.paper && obj.question) parsed.push(obj);
+      });
+
+      const out = document.getElementById('bulkPreviewArea');
+      if(!parsed.length) { out.innerHTML = `<span class="neg">Verification Error: No compliant syntax objects parsed.</span>`; return; }
+      
+      out.innerHTML = `<p class="pos">Syntactically Verified: ${parsed.length} Records Decoded</p>`;
+      styleBlock(document.getElementById('bulkImportBtn'), 'inline-block');
+      
+      document.getElementById('bulkImportBtn').onclick = async () => {
+        parsed.forEach(p => { p.id = uid(); p.bookmarked = false; state.questions.push(p); });
+        await saveData();
+        alert('Mass ingestion process finalized clean.');
+        document.getElementById('bulkText').value = '';
+        out.innerHTML = '';
+        styleBlock(document.getElementById('bulkImportBtn'), 'none');
+      };
+    };
+  }
+
+  /* ---- Application Initialization Initialization Entry Point ---- */
+  loadData().then(() => {
+    initMarketModule();
+    initAddModule();
+  });
+})();
+</script>
+</body>
+</html>
